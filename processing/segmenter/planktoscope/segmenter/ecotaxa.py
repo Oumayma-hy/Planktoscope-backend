@@ -238,6 +238,13 @@ def ecotaxa_export(archive_filepath, metadata, image_base_path, keep_files=False
         image_base_path (str): path where the files where saved
         keep_files (bool, optional): Whether to keep the original files or just the archive. Defaults to False (keep the archive only).
     """
+    # Extract the base name from the image base path
+    base_name = os.path.basename(image_base_path.rstrip('/'))
+
+    # Update the archive_filepath and tsv_filepath to include the base name
+    archive_filepath = os.path.join(os.path.dirname(archive_filepath), f"ecotaxa_{base_name}.zip")
+    tsv_filename = f"ecotaxa_{base_name}.tsv"
+
     logger.info("Starting the ecotaxa archive export")
     with zipfile.ZipFile(archive_filepath, "w") as archive:
         # empty table, one line per object
@@ -282,10 +289,10 @@ def ecotaxa_export(archive_filepath, metadata, image_base_path, keep_files=False
         tsv_content.columns = pandas.MultiIndex.from_tuples(
             list(zip(tsv_content.columns, tsv_type_header))
         )
-
+        
         # add the tsv to the archive
         archive.writestr(
-            "ecotaxa_export_modified.tsv",
+            tsv_filename,
             io.BytesIO(
                 tsv_content.to_csv(sep="\t", encoding="utf-8", index=False).encode()
             ).read(),
