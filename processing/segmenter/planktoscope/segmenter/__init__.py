@@ -998,6 +998,12 @@ class SegmenterProcess(multiprocessing.Process):
                     f"We did not understand the received request {last_message}"
                 )
 
+
+    def get_total_tasks(self):
+        # get the total number of tasks
+        
+        return 7
+
     ################################################################################
     # While loop for capturing commands from Node-RED
     ################################################################################
@@ -1007,6 +1013,10 @@ class SegmenterProcess(multiprocessing.Process):
         logger.info(
             f"The segmenter control thread has been started in process {os.getpid()}"
         )
+
+        total_tasks = self.get_total_tasks()  # Method to get total number of tasks
+        completed_tasks = 0
+        start_time = time.time()
 
         # MQTT Service connection
         self.segmenter_client = planktoscope.mqtt.MQTT_Client(
@@ -1040,8 +1050,25 @@ class SegmenterProcess(multiprocessing.Process):
         logger.success("Segmenter is READY!")
 
         # This is the loop
+        # This is the loop
         while not self.stop_event.is_set():
             self.treat_message()
+
+            # Assuming `treat_message` processes one task
+            completed_tasks += 1
+
+            # Calculate estimated time left
+            elapsed_time = time.time() - start_time
+            average_time_per_task = elapsed_time / completed_tasks if completed_tasks > 0 else 0
+            remaining_tasks = total_tasks - completed_tasks
+            estimated_duration_left = average_time_per_task * remaining_tasks
+
+            # Publish the estimated time left to via MQTT to Node-RED
+            self.segmenter_client.client.publish(
+                "status/segmenter",
+                json.dumps({"status": "In Progress", "estimated_duration_left": estimated_duration_left})
+            )
+
             time.sleep(0.5)
 
         logger.info("Shutting down the segmenter process")
